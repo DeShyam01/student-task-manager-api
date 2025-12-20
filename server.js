@@ -1,6 +1,7 @@
 const express = require("express");
 const db = require("./src/config/db");
 const taskRoutes = require("./src/routes/tasksRoutes");
+const userRoutes = require("./src/routes/userRoutes");
 const requestLogger = require("./src/middleware/requestLogger");
 const globalErrorCatcher = require("./src/middleware/globalErrorCatcherMiddleware");
 require("dotenv").config();
@@ -21,8 +22,7 @@ app.get("/health", (req, res) => {
 });
 
 app.use("/api/v1/tasks", taskRoutes);
-
-app.use(globalErrorCatcher);
+app.use("/api/v1/users", userRoutes);
 
 app.listen(PORT, () => {
   console.log("Server running on port", PORT);
