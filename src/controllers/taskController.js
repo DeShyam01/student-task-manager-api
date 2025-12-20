@@ -1,8 +1,10 @@
 const Tasks = require("../models/Tasks");
+const Users = require("../models/Users");
 
 const getAllTasks = async (req, res, next) => {
   try {
-    const tasks = await Tasks.find();
+    const user = await Users.findById(req.user.id);
+    const tasks = await Tasks.find({_id: {$in: user.tasks}});
     res.json(tasks);
   } catch (error) {
     console.log("Error in getAllTasks: ", error.message);
@@ -122,6 +124,7 @@ const getPendingTasks = async (req, res, next) => {
 const getPriorityTasks = async (req, res, next) => {
   try {
     const tasks = await Tasks.aggregate([
+      { $match: { status: "Pending" } },
       {
         $addFields: {
           priorityRank: {
@@ -136,7 +139,6 @@ const getPriorityTasks = async (req, res, next) => {
           },
         },
       },
-      { $match: { status: "Pending" } },
       { $sort: { priorityRank: 1, dueDate: 1 } },
       { $project: { priorityRank: 0 } },
     ]);
@@ -152,6 +154,42 @@ const getPriorityTasks = async (req, res, next) => {
   }
 };
 
+const getDueTasks = async (req, res, next) => {
+  try {
+    const due = req.query.due;
+    let filter = {};
+
+    if (due !== "today" && due !== "upcoming" && due !== "overdue") {
+      return res.status(400).json({ message: "Invalid due date" });
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+
+    if (due === "today") {
+      filter.dueDate = { $gte: today, $lt: tomorrow };
+      filter.status = "Pending";
+    }
+    if (due === "upcoming") {
+      filter.dueDate = { $gte: tomorrow };
+      filter.status = "Pending";
+    }
+    if (due === "overdue") {
+      filter.dueDate = { $lt: today };
+      filter.status = "Pending";
+    }
+
+    const tasks = await Tasks.find(filter);
+
+    res.status(200).json(tasks);
+  } catch (error) {
+    console.log("Error in getDueTasks: ", error);
+    next(error);
+  }
+};
+
 module.exports = {
   getAllTasks,
   getTaskById,
@@ -161,4 +199,5 @@ module.exports = {
   markComplete,
   getPendingTasks,
   getPriorityTasks,
+  getDueTasks,
 };
