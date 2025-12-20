@@ -1,22 +1,31 @@
-const express = require("express")
-const db = require("./src/config/db")
-require("dotenv").config()
-const app = express()
+const express = require("express");
+const db = require("./src/config/db");
+const taskRoutes = require("./src/routes/tasksRoutes");
+const requestLogger = require("./src/middleware/requestLogger");
+const globalErrorCatcher = require("./src/middleware/globalErrorCatcherMiddleware");
+require("dotenv").config();
 
-const PORT = process.env.PORT || 3000
+const app = express();
+const PORT = process.env.PORT || 4000;
 
+app.use(express.json());
+app.use(requestLogger);
+app.use(globalErrorCatcher);
 
+app.get("/health", (req, res) => {
+  try {
+    res.status(201).json({ message: "server is running" });
+  } catch (error) {
+    res.status(500).json(error.message);
+  }
+});
 
-app.get("/health", (req, res)=>{
-    try {
-        res.status(201).json({message: "server is running"})
-    } catch (error) {
-        res.status(500).json(error.message)
-    }
-})
+app.use("/api/v1/tasks", taskRoutes);
 
-app.listen(PORT,()=>{
-    console.log("Server running on port 3000")
-})
+app.use(globalErrorCatcher);
 
-db.connectDB()
+app.listen(PORT, () => {
+  console.log("Server running on port", PORT);
+});
+
+db.connectDB();

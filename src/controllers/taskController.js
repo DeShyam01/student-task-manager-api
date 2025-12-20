@@ -107,26 +107,50 @@ const markComplete = async (req, res, next) => {
 };
 
 const getPendingTasks = async (req, res, next) => {
-    try {
-        const tasks = await Tasks.find({status: "Pending"}).lean();
-        if(!tasks){
-            return res.status(200).json({message: "No task pending task"});
-        }
-        return res.status(200).json(tasks);
-    } catch (error) {
-        console.log("Error in pendingTasks: ", error);
-        next(error);
+  try {
+    const tasks = await Tasks.find({ status: "Pending" }).lean();
+    if (!tasks) {
+      return res.status(200).json({ message: "No task pending task" });
     }
-}
+    return res.status(200).json(tasks);
+  } catch (error) {
+    console.log("Error in pendingTasks: ", error);
+    next(error);
+  }
+};
 
 const getPriorityTasks = async (req, res, next) => {
-    try {
-        
-    } catch (error) {
-        console.log("Error in getPriorityTasks: ", error);
-        next(error);
+  try {
+    const tasks = await Tasks.aggregate([
+      {
+        $addFields: {
+          priorityRank: {
+            $switch: {
+              branches: [
+                { case: { $eq: ["$priority", "High"] }, then: 1 },
+                { case: { $eq: ["$priority", "Medium"] }, then: 2 },
+                { case: { $eq: ["$priority", "Low"] }, then: 3 },
+              ],
+              default: 4,
+            },
+          },
+        },
+      },
+      { $match: { status: "Pending" } },
+      { $sort: { priorityRank: 1, dueDate: 1 } },
+      { $project: { priorityRank: 0 } },
+    ]);
+
+    if (!tasks || tasks.length === 0) {
+      return res.status(200).json({ message: "No tasks found" });
     }
-}
+
+    return res.status(200).json(tasks);
+  } catch (error) {
+    console.log("Error in getPriorityTasks: ", error);
+    next(error);
+  }
+};
 
 module.exports = {
   getAllTasks,
@@ -136,5 +160,5 @@ module.exports = {
   deleteTask,
   markComplete,
   getPendingTasks,
-  getPriorityTasks
+  getPriorityTasks,
 };
