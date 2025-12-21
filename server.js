@@ -22,7 +22,7 @@ app.get("/health", (req, res) => {
 });
 
 app.use("/api/v1/tasks", taskRoutes);
-app.use("/api/v1/users", userRoutes);
+app.use("/api/v1/user", userRoutes);
 
 app.listen(PORT, () => {
   console.log("Server running on port", PORT);

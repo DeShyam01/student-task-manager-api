@@ -3,8 +3,7 @@ const Users = require("../models/Users");
 
 const getAllTasks = async (req, res, next) => {
   try {
-    const user = await Users.findById(req.user.id);
-    const tasks = await Tasks.find({_id: {$in: user.tasks}});
+    const tasks = await Tasks.find({userId: req.user.id});
     res.json(tasks);
   } catch (error) {
     console.log("Error in getAllTasks: ", error.message);
@@ -17,7 +16,7 @@ const getTaskById = async (req, res, next) => {
     const id = req.params.id;
 
     const task = await Tasks.findById(id);
-    if (!task) {
+    if (!task || task.userId != req.user.id) {
       return res.status(404).json({ message: "Task not found" });
     }
     res.status(200).json(task);
@@ -30,12 +29,13 @@ const getTaskById = async (req, res, next) => {
 const createTask = async (req, res, next) => {
   try {
     const { title, description, dueDate, priority } = req.body;
+    userId = req.user.id
 
     if (!title || !description || !dueDate || !priority) {
       return res.status(400).json({ message: "all fields are required" });
     }
 
-    const newTask = new Tasks({ title, description, dueDate, priority });
+    const newTask = new Tasks({ title, description, dueDate, priority, userId });
     await newTask.save();
 
     res.status(201).json(newTask);
@@ -48,6 +48,12 @@ const createTask = async (req, res, next) => {
 const updateTask = async (req, res, next) => {
   try {
     const id = req.params.id;
+    console.log("req.params.id: ",id);
+    const task = await Tasks.findById(id).userId
+    if(task.userId != req.user.id){
+      console.log(Tasks.findById(id).userId, req.user.id);
+      return res.status(404).json({ message: "Task not found" });
+    }
 
     const { title, description, dueDate, priority } = req.body;
     if (!title || !description || !dueDate || !priority) {

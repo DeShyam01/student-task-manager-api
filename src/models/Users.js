@@ -20,10 +20,6 @@ const userSchema = new mongoose.Schema({
         Enum: ["admin", "student"],
         default: "student"
     },
-    tasks: [{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Tasks"
-    }],
     createdAt: {
         type: Date,
         default: Date.now
