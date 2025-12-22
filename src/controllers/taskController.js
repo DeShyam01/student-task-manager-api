@@ -4,8 +4,56 @@ const Users = require("../models/Users");
 
 const getAllTasks = async (req, res, next) => {
   try {
-    const tasks = await Tasks.find({ userId: req.user.id });
-    res.json(tasks);
+    const userId = req.user.id;
+
+    const { status, priority, due, sort } = req.query;
+
+    let filter = { userId };
+
+    if (status) {
+      filter.status = status;
+    }
+
+    if (priority) {
+      if (priority == "High") {
+        filter.priority = 1;
+      } else if (priority == "Medium") {
+        filter.priority = 2;
+      } else if (priority == "Low") {
+        filter.priority = 3;
+      }
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+
+    if (due === "today") {
+      filter.dueDate = { $gte: today, $lt: tomorrow };
+    }
+    if (due === "upcoming") {
+      filter.dueDate = { $gte: tomorrow };
+    }
+    if (due === "overdue") {
+      filter.dueDate = { $lt: today };
+    }
+
+    let sortOption = {};
+    if (sort === "dueDate") {
+      sortOption.dueDate = 1;
+    } else if (sort === "priority") {
+      sortOption.priority = 1;
+    }
+
+    const tasks = await Tasks.find(filter).sort(sortOption);
+
+    if (!tasks) {
+      return res.status(200).json({ message: "No tasks found" });
+    }
+
+    res.status(200).json(tasks);
   } catch (error) {
     console.log("Error in getAllTasks: ", error.message);
     next(error);
@@ -118,103 +166,11 @@ const markComplete = async (req, res, next) => {
   }
 };
 
-const getPendingTasks = async (req, res, next) => {
-  try {
-    const tasks = await Tasks.find({
-      status: "Pending",
-      userId: req.user.id,
-    }).lean();
-    if (!tasks) {
-      return res.status(200).json({ message: "No task pending task" });
-    }
-    return res.status(200).json(tasks);
-  } catch (error) {
-    console.log("Error in pendingTasks: ", error);
-    next(error);
-  }
-};
-
-const getPriorityTasks = async (req, res, next) => {
-  try {
-    const tasks = await Tasks.aggregate([
-      { $match: { userId: new mongoose.Types.ObjectId(req.user.id), status: "Pending", dueDate: { $gte: new Date() } } },
-      {
-        $addFields: {
-          priorityRank: {
-            $switch: {
-              branches: [
-                { case: { $eq: ["$priority", "High"] }, then: 1 },
-                { case: { $eq: ["$priority", "Medium"] }, then: 2 },
-                { case: { $eq: ["$priority", "Low"] }, then: 3 },
-              ],
-              default: 4,
-            },
-          },
-        },
-      },
-      { $sort: { priorityRank: 1, dueDate: 1 } },
-      { $project: { priorityRank: 0 } },
-    ]);
-
-    if (!tasks || tasks.length === 0) {
-      return res.status(200).json({ message: "No tasks found" });
-    }
-
-    return res.status(200).json(tasks);
-  } catch (error) {
-    console.log("Error in getPriorityTasks: ", error);
-    next(error);
-  }
-};
-
-const getDueTasks = async (req, res, next) => {
-  try {
-    const due = req.query.due;
-    let filter = {userId: req.user.id};
-
-    if (due !== "today" && due !== "upcoming" && due !== "overdue") {
-      return res.status(400).json({ message: "Invalid due date" });
-    }
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(today.getDate() + 1);
-
-    if (due === "today") {
-      filter.dueDate = { $gte: today, $lt: tomorrow };
-      filter.status = "Pending";
-    }
-    if (due === "upcoming") {
-      filter.dueDate = { $gte: tomorrow };
-      filter.status = "Pending";
-    }
-    if (due === "overdue") {
-      filter.dueDate = { $lt: today };
-      filter.status = "Pending";
-    }
-
-    const tasks = await Tasks.find(filter);
-
-    if (!tasks || tasks.length === 0) {
-      return res.status(200).json({ message: "No tasks found" });
-    }
-
-    res.status(200).json(tasks);
-  } catch (error) {
-    console.log("Error in getDueTasks: ", error);
-    next(error);
-  }
-};
-
 module.exports = {
   getAllTasks,
   getTaskById,
   createTask,
   updateTask,
   deleteTask,
-  markComplete,
-  getPendingTasks,
-  getPriorityTasks,
-  getDueTasks,
+  markComplete
 };
