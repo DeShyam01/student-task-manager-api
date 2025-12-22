@@ -1,9 +1,10 @@
+const mongoose = require("mongoose");
 const Tasks = require("../models/Tasks");
 const Users = require("../models/Users");
 
 const getAllTasks = async (req, res, next) => {
   try {
-    const tasks = await Tasks.find({userId: req.user.id});
+    const tasks = await Tasks.find({ userId: req.user.id });
     res.json(tasks);
   } catch (error) {
     console.log("Error in getAllTasks: ", error.message);
@@ -29,13 +30,19 @@ const getTaskById = async (req, res, next) => {
 const createTask = async (req, res, next) => {
   try {
     const { title, description, dueDate, priority } = req.body;
-    userId = req.user.id
+    const userId = req.user.id;
 
     if (!title || !description || !dueDate || !priority) {
       return res.status(400).json({ message: "all fields are required" });
     }
 
-    const newTask = new Tasks({ title, description, dueDate, priority, userId });
+    const newTask = new Tasks({
+      title,
+      description,
+      dueDate,
+      priority,
+      userId,
+    });
     await newTask.save();
 
     res.status(201).json(newTask);
@@ -48,29 +55,26 @@ const createTask = async (req, res, next) => {
 const updateTask = async (req, res, next) => {
   try {
     const id = req.params.id;
-    console.log("req.params.id: ",id);
-    const task = await Tasks.findById(id).userId
-    if(task.userId != req.user.id){
-      console.log(Tasks.findById(id).userId, req.user.id);
+
+    const updates = {};
+    const allowedUpdates = ["title", "description", "dueDate", "priority"];
+
+    allowedUpdates.forEach((update) => {
+      if (req.body[update] != null && req.body[update] !== "") {
+        updates[update] = req.body[update];
+      }
+    });
+
+    updates.updatedAt = Date.now();
+
+    const updatedTask = await Tasks.findOneAndUpdate(
+      { _id: id, userId: req.user.id },
+      updates,
+      { new: true, runValidators: true }
+    );
+    if (!updatedTask) {
       return res.status(404).json({ message: "Task not found" });
     }
-
-    const { title, description, dueDate, priority } = req.body;
-    if (!title || !description || !dueDate || !priority) {
-      return res.status(400).json({ message: "all fields are required" });
-    }
-
-    const updatedTask = await Tasks.findByIdAndUpdate(
-      id,
-      {
-        title,
-        description,
-        dueDate,
-        priority,
-      },
-      { new: true }
-    );
-    await updatedTask.save();
     res.status(200).json(updatedTask);
   } catch (error) {
     console.log("Error in updateTask: ", error.message);
@@ -82,7 +86,7 @@ const deleteTask = async (req, res, next) => {
   try {
     const id = req.params.id;
 
-    const task = await Tasks.findByIdAndDelete(id);
+    const task = await Tasks.findOneAndDelete({ _id: id, userId: req.user.id });
     if (!task) {
       return res.status(404).json({ message: "Task not found" });
     }
@@ -98,10 +102,10 @@ const markComplete = async (req, res, next) => {
   try {
     const id = req.params.id;
 
-    const task = await Tasks.findByIdAndUpdate(
-      id,
+    const task = await Tasks.findOneAndUpdate(
+      { _id: id, userId: req.user.id },
       { status: "completed" },
-      { new: true }
+      { new: true, runValidators: true }
     );
     if (!task) {
       return res.status(404).json({ message: "Task not found" });
@@ -116,7 +120,10 @@ const markComplete = async (req, res, next) => {
 
 const getPendingTasks = async (req, res, next) => {
   try {
-    const tasks = await Tasks.find({ status: "Pending" }).lean();
+    const tasks = await Tasks.find({
+      status: "Pending",
+      userId: req.user.id,
+    }).lean();
     if (!tasks) {
       return res.status(200).json({ message: "No task pending task" });
     }
@@ -130,7 +137,7 @@ const getPendingTasks = async (req, res, next) => {
 const getPriorityTasks = async (req, res, next) => {
   try {
     const tasks = await Tasks.aggregate([
-      { $match: { status: "Pending" } },
+      { $match: { userId: new mongoose.Types.ObjectId(req.user.id), status: "Pending", dueDate: { $gte: new Date() } } },
       {
         $addFields: {
           priorityRank: {
@@ -163,7 +170,7 @@ const getPriorityTasks = async (req, res, next) => {
 const getDueTasks = async (req, res, next) => {
   try {
     const due = req.query.due;
-    let filter = {};
+    let filter = {userId: req.user.id};
 
     if (due !== "today" && due !== "upcoming" && due !== "overdue") {
       return res.status(400).json({ message: "Invalid due date" });
@@ -188,6 +195,10 @@ const getDueTasks = async (req, res, next) => {
     }
 
     const tasks = await Tasks.find(filter);
+
+    if (!tasks || tasks.length === 0) {
+      return res.status(200).json({ message: "No tasks found" });
+    }
 
     res.status(200).json(tasks);
   } catch (error) {

@@ -15,8 +15,7 @@ const authMiddleware = async (req, res, next) => {
         req.user = decodedToken
         next()
     } catch (error) {
-        console.log("Error in authMiddleware: ", error)
-        next(error)
+        return res.status(401).json({error: error.message})
     }
 }
 
