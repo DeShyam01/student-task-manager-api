@@ -1,5 +1,4 @@
 const jwt = require("jsonwebtoken")
-const bcrypt = require("bcryptjs")
 
 const authMiddleware = async (req, res, next) => {
     try {

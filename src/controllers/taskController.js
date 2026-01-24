@@ -1,6 +1,4 @@
-const mongoose = require("mongoose");
 const Tasks = require("../models/Tasks");
-const Users = require("../models/Users");
 
 const getAllTasks = async (req, res, next) => {
   try {
