@@ -1,10 +1,13 @@
 const express = require("express");
+const cors = require("cors");
 const db = require("./src/config/db");
+
 const taskRoutes = require("./src/routes/tasksRoutes");
 const userRoutes = require("./src/routes/userRoutes");
+const activityRoutes = require("./src/routes/activityRoutes");
 const requestLogger = require("./src/middleware/requestLogger");
 const globalErrorCatcher = require("./src/middleware/globalErrorCatcherMiddleware");
-const cors = require("cors");
+
 require("dotenv").config();
 
 const app = express();
@@ -25,6 +28,7 @@ app.get("/health", (req, res) => {
 
 app.use("/api/v1/tasks", taskRoutes);
 app.use("/api/v1/user", userRoutes);
+app.use("/api/v1/activity", activityRoutes);
 
 app.listen(PORT, () => {
   console.log("Server running on port", PORT);

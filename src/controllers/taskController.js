@@ -1,4 +1,5 @@
 const Tasks = require("../models/Tasks");
+const {createActivity} = require("./activityController");
 
 const getAllTasks = async (req, res, next) => {
   try {
@@ -89,6 +90,9 @@ const createTask = async (req, res, next) => {
       priority,
       userId,
     });
+
+    await createActivity({userId, type: "create", message: `Created ${newTask.title}`, taskId: newTask._id});
+
     await newTask.save();
 
     res.status(201).json(newTask);
@@ -121,6 +125,9 @@ const updateTask = async (req, res, next) => {
     if (!updatedTask) {
       return res.status(404).json({ message: "Task not found" });
     }
+
+    await createActivity({userId, type: "update", message: `Updated ${updatedTask.title}`, taskId: updatedTask._id});
+
     res.status(200).json(updatedTask);
   } catch (error) {
     console.log("Error in updateTask: ", error.message);
@@ -136,6 +143,8 @@ const deleteTask = async (req, res, next) => {
     if (!task) {
       return res.status(404).json({ message: "Task not found" });
     }
+
+    await createActivity({userId, type: "delete", message: `Deleted ${task.title}`, taskId: task._id});
 
     res.status(200).json({ message: "Task deleted successfuly", data: task });
   } catch (error) {
@@ -156,6 +165,8 @@ const markComplete = async (req, res, next) => {
     if (!task) {
       return res.status(404).json({ message: "Task not found" });
     }
+
+    await createActivity({userId, type: "complete", message: `Completed ${task.title}`, taskId: task._id});
 
     res.status(200).json(task);
   } catch (error) {
