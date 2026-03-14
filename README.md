@@ -2,7 +2,7 @@
 
 A RESTful API for managing student tasks with JWT-based authentication. Built with Node.js, Express, and MongoDB.
 
-**🌐 Live API:** [https://student-task-manager-api-1.onrender.com](https://student-task-manager-api-1.onrender.com)
+**🌐 Live API:** [https://student-task-manager-api-latest.onrender.com](https://student-task-manager-api-latest.onrender.com)
 
 ---
 
