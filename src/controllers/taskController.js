@@ -86,7 +86,7 @@ const createTask = async (req, res, next) => {
     const newTask = new Tasks({
       title,
       description,
-      dueDate,
+      dueDate: new Date(dueDate),
       priority,
       userId,
     });
